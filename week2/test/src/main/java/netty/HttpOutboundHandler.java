@@ -1,6 +1,7 @@
 package netty;
 
 import com.alibaba.fastjson.JSONObject;
+import filter.HttpResposeFilter;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -12,7 +13,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -32,8 +34,15 @@ public class HttpOutboundHandler {
   private static final MediaType FORM = MediaType
       .parse("application/x-www-form-urlencoded; charset=utf-8");
 
+  private List<HttpResposeFilter> httpResposeFilterList;
+
   public HttpOutboundHandler() {
     this.okHttp = new OkHttpClient();
+    httpResposeFilterList = new ArrayList<>();
+  }
+
+  void addHttpReponseFilter(HttpResposeFilter httpResposeFilter) {
+    httpResposeFilterList.add(httpResposeFilter);
   }
 
   public void flush(final FullHttpRequest fullHttpRequest, final ChannelHandlerContext ctx,
@@ -90,6 +99,9 @@ public class HttpOutboundHandler {
       response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
     } finally {
       if (response != null) {
+        for (HttpResposeFilter fullHttpResponse: httpResposeFilterList) {
+          fullHttpResponse.filter(response);
+        }
         if (!HttpUtil.isKeepAlive(fullHttpRequest)) {
           ctx.write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
