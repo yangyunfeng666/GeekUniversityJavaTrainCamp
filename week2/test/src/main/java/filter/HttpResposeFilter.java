@@ -1,9 +1,9 @@
 package filter;
 
-import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 
 public interface HttpResposeFilter {
 
-  void filter(FullHttpResponse fullHttpResponse);
+  void filter(HttpResponse fullHttpResponse);
 
 }
