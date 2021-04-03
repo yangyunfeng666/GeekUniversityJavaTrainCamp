@@ -13,15 +13,18 @@ public class OkHttpClientTest {
   private static final String URL = "http://localhost:8080";
 
   public static void main(String[] args) {
+
     okhttp3.OkHttpClient okHttpClient = new OkHttpClient();
     final Request request = new Request.Builder().url(URL).get().build();
     Call call = okHttpClient.newCall(request);
     call.enqueue(new Callback() {
+      @Override
       public void onFailure(@NotNull Call call, @NotNull IOException e) {
         System.out.println(e);
         call.clone();
       }
 
+      @Override
       public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
         System.out.println(response.body().string());
         call.clone();
