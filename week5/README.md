@@ -180,7 +180,7 @@ public class TestAutoConfiguration {
 3）配置 Hikari 连接池，改进上述操作。提交代码到 GitHub。
 ```
 代码
-1.元素接口增删改查
+1.使用JDBC 元素接口增删改查
 ```
 
 
@@ -352,7 +352,7 @@ public static void main(String[] args) {
 主要是两点，一个是设置非自动提交，第二个是执行未出现问题，commit,出现异常，rollback()
 
 
-配置 Hikari 连接池，改进上述操作。提交代码到 GitHub。
+3.配置 Hikari 连接池，改进上述操作。提交代码到 GitHub。
 ```
 
 public class HikariTest {
