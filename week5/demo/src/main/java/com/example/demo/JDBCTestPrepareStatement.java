@@ -26,7 +26,7 @@ public class JDBCTestPrepareStatement {
       Class.forName("com.mysql.jdbc.Driver");
       connection = DriverManager
           .getConnection("jdbc:mysql://39.108.1.211:3306/dubbo?serverTimezone=UTC", "root",
-              "Yang123456!qazwsx");
+              "Yad");
       System.out.println(connection);
 //      preparedStatement = connection.prepareStatement();
       //crate table

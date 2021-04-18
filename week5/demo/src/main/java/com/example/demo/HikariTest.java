@@ -32,7 +32,7 @@ public class HikariTest {
   public static void main(String[] args) {
 
 
-    HikariDataSource hikariDataSource = initDataSource("jdbc:mysql://39.108.1.211:3306/dubbo?serverTimezone=UTC",10,"root","Yang123456!qazwsx");
+    HikariDataSource hikariDataSource = initDataSource("jdbc:mysql://39.108.1.211:3306/dubbo?serverTimezone=UTC",10,"root","Y!qazwsx");
 
     String createSql = "create table a (`id` int(0) not null, `name` varchar(20) default null ,`age` int(2) default 0,primary key(`id`))";
 
