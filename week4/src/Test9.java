@@ -56,8 +56,8 @@ public class Test9 {
       }
     };
 
-    Thread thread = new Thread(callable);
-    thread.start();
+//    Thread thread = new Thread(callable);
+//    thread.start();
 
 //    Thread mainThread = Thread.currentThread();
 //    WorkThread workThread = new WorkThread(mainThread);
