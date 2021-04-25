@@ -41,7 +41,7 @@ CREATE TABLE `t_user` (
 	PRIMARY KEY (`id`)
 ) ENGINE=`InnoDB` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ROW_FORMAT=DYNAMIC COMMENT='用户登录表' CHECKSUM=0 DELAY_KEY_WRITE=0;
 ```
-产品表 产品id id,产品名字name，产品描述detail，产品价格price ,产品状态status(varchar(20))
+产品表 产品id id,产品名字name，产品描述detail，产品价格price ,产品状态status
 ```
 CREATE TABLE `t_product` (
 	`id` bigint(20) NOT NULL,
