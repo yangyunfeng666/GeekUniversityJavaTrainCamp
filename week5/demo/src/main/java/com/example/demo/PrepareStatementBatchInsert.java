@@ -16,7 +16,6 @@ public class PrepareStatementBatchInsert {
     String insertSql = "insert into t_user(`id`,`login_id`,`passwd`,`status`,`create_user`,`create_date`,`update_user`,`update_date`) values (?,?,?,?,?,?,?,?)";
 
 
-    PreparedStatement preparedStatement = null;
     Connection connection = null;
     try {
       Class.forName("com.mysql.jdbc.Driver");

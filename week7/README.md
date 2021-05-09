@@ -48,7 +48,7 @@ CREATE TABLE `t_user` (
 ```
 按自己设计的表结构，插入 100 万订单模拟数据，测试不同方式的插入效率
 ```
-这里就模拟插入用户表100万。
+这里就模拟插入用户表100万。我只测试了1w。
 ### 思路1
 ```
 从效率上，如果当条插入，需要每条都解析sql，可以使用批量插入的，比如insert into（字段） 中间插入数据，但是整个数据的的包不能大于max_allowed_packet的值，可以先
@@ -146,6 +146,213 @@ the total time 129238
 ```
 alter table t_user add primary key(id);
 ```
+### 思路3 
+查询备份文件路径
+show variables like '%secure%'
+```
++--------------------------+-----------------------+
+| Variable_name            | Value                 |
++--------------------------+-----------------------+
+| require_secure_transport | OFF                   |
+| secure_auth              | ON                    |
+| secure_file_priv         | /var/lib/mysql-files/ |
++--------------------------+-----------------------+
+```
+导出文件到文件
+```
+ select * from t_user into outfile "/var/lib/mysql-files/e.sql" fields terminated by ',';
+Query OK, 10000 rows affected (0.01 sec)
+```
+导出只需要了0.01s
+然后删除数据的t_user的数据
+```
+truncate  `t_user`;
+```
+loadData 从svn 文件导入数据库，使用mysql load data命令
+```
+load data infile "/var/lib/mysql-files/e.sql" into table t_user fields terminated by ',';
+Query OK, 10000 rows affected (0.18 sec)
+Records: 10000  Deleted: 0  Skipped: 0  Warnings: 0
+```
+从e.sql文件中到入数据到本地库，使用，分割数据。
+也可以先去掉索引这些，然后成功后再重建。
+这里使用了0.18s
+
+## 必做题9
+题目
+```
+（必做）读写分离 - 动态切换数据源版本 1.0
+```
+### 思路1
+通过实现AbstractRoutingDataSource的determineCurrentLookupKey方法，从上下文中读取，数据库连接。通过key value的形式，存放连接。然后dao在读取的时候是从线程的上下文读取连接。
+
+对AbstractRoutingDataSource是实现
+```
+
+@Component("DynamicDataSource")
+public class DynamicDataSource extends AbstractRoutingDataSource {
+
+  public DynamicDataSource(DataSource defaultTargetDataSource, Map<Object, Object> targetDataSources) {
+    super.setDefaultTargetDataSource(defaultTargetDataSource);
+    super.setTargetDataSources(targetDataSources);
+    super.afterPropertiesSet();
+  }
+
+  @Override
+  protected Object determineCurrentLookupKey() {
+    return DataSourceContextHolder.getDataSourceType();
+  }
+
+}
+```
+然后把连接存放到DataSourceContextHolder里面
+```
+
+@Configuration
+public class DataSourceConfig {
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.default-datasource")
+    public DataSource defaultDataSource() {
+        return DruidDataSourceBuilder.create().build();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.target-datasources.datasource1")
+    public DataSource dataSource1() {
+        return DruidDataSourceBuilder.create().build();
+    }
+
+
+    @Bean
+    @Primary
+    public DataSource dynamicDataSource(DataSource defaultDataSource, DataSource dataSource1) {
+        Map<Object, Object> targetDataSources = new HashMap<>();
+        targetDataSources.put(DataSourceType.DEFAULT_DATASOURCE.name(), defaultDataSource);
+        targetDataSources.put(DataSourceType.DATASOURCE1.name(), dataSource1);
+        return new DynamicDataSource(defaultDataSource, targetDataSources);
+    }
+}
+
+```
+DataSourceContextHolder 的keyValue存放连接的上下文
+```
+ublic class DataSourceContextHolder {
+
+    public static final ThreadLocal<String> CONTEXT_HOLDER = new ThreadLocal<String>();
+
+    public static void setDataSourceType(String dsType) {
+        CONTEXT_HOLDER.set(dsType);
+    }
+
+    public static String getDataSourceType() {
+        return CONTEXT_HOLDER.get();
+    }
+
+    public static void removeDataSourceType() {
+        CONTEXT_HOLDER.remove();
+    }
+
+}
+
+public enum  DataSourceType {
+
+    /** 默认数据源key */
+    DEFAULT_DATASOURCE,
+
+    /** 数据源1key*/
+    DATASOURCE1,
+
+}
+
+```
+使用的时候,需要手动的切换上下文的连接
+```
+
+@RestController
+@RequestMapping("/test")
+public class TestController {
+
+  @Autowired
+  private UserMapper userMapper;
+
+  @GetMapping("/test")
+  public List<UserDao> test(@RequestParam("index") int index) {
+    if (index == 1) {
+      DataSourceContextHolder.setDataSourceType(DataSourceType.DEFAULT_DATASOURCE.name());
+    } else {
+      DataSourceContextHolder.setDataSourceType(DataSourceType.DATASOURCE1.name());
+    }
+    List<UserDao> list = userMapper.select();
+    DataSourceContextHolder.removeDataSourceType();
+    return list;
+  }
+}
+```
+使用完成后从本地线程池中移除
+
+## 必做题9
+题目
+```
+（必做）读写分离 - 数据库框架版本 2.0
+```
+### 思路1
+这里使用shardingsphere-jdbc,进行读写分离。不就行分库分表
+配置 
+```
+#指定mybatis信息
+mybatis.config-location=classpath:mybatis-config.xml
+
+spring.shardingsphere.datasource.names=master,slave0
+# 数据源 主库
+spring.shardingsphere.datasource.master.type=com.alibaba.druid.pool.DruidDataSource
+spring.shardingsphere.datasource.master.driver-class-name=com.mysql.jdbc.Driver
+spring.shardingsphere.datasource.master.url=jdbc:mysql://localhost:3306/master?characterEncoding=utf-8
+spring.shardingsphere.datasource.master.username=root
+spring.shardingsphere.datasource.master.password=123456
+# 数据源 从库
+spring.shardingsphere.datasource.slave0.type=com.alibaba.druid.pool.DruidDataSource
+spring.shardingsphere.datasource.slave0.driver-class-name=com.mysql.jdbc.Driver
+spring.shardingsphere.datasource.slave0.url=jdbc:mysql://localhost:3306/slave?characterEncoding=utf-8
+spring.shardingsphere.datasource.slave0.username=root
+spring.shardingsphere.datasource.slave0.password=123456
+
+# 读写分离
+spring.shardingsphere.masterslave.load-balance-algorithm-type=round_robin
+spring.shardingsphere.masterslave.name=ms
+spring.shardingsphere.masterslave.master-data-source-name=master
+spring.shardingsphere.masterslave.slave-data-source-names=slave0
+#打印sql
+spring.shardingsphere.props.sql.show=true
+
+```
+配置ds0和ds1两个数据库，使用随机读取算法，
+然后是使用的时候直接使用mybatis使用就可以了
+```
+@RestController
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+    /**
+     * @Description: 保存用户
+     */
+    @PostMapping("save-user")
+    public Object saveUser() {
+        return userService.saveOne(new User("小小", "女", 3));
+    }
+    /**
+     * @Description: 获取用户列表
+     */
+    @GetMapping("list-user")
+    public Object listUser() {
+        return userService.list();
+    }
+}
+```
+
+### 思路2
+使用mycat 
 
 
 
