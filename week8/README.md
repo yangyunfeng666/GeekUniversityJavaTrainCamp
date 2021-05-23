@@ -391,7 +391,6 @@ public class TransactionConfiguration {
 因为这里我使用了mybatis-plus的原因，需要在测试插入到不同的库，默认，分片数据的分布式XA事务
 
 ```
-
 @Override
 @Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRED)
 @ShardingTransactionType(TransactionType.XA)
@@ -412,8 +411,7 @@ public int add() throws Exception {
 }
 ```
 
-在方法上注解了回滚的错误异常，和ShardingSphere的XA事务类型。数据插入，到第8条的时候，抛出异常没有，让xa回滚。
-
+在方法上注解了回滚的错误异常，和注解ShardingSphere的XA事务。当数据插入，到第8条的时候，抛出异常没有，让xa回滚。
 
 
 读取然后在读取原来的数据库，发现没有插入.
@@ -424,7 +422,8 @@ public IPage<OrderVo> queryPage(int size,int current) {
   page.setRecords(orderMapper.queryPage(page));
   return page;
 }
-
 ```
+正向测试是可以去掉抛出异常的地方，查看数据是否插入到了数据里面。
+
 
 
