@@ -7,5 +7,7 @@ public interface OrderService {
 
   IPage<OrderVo> queryPage(int size,int current);
 
-  int add();
+  int add() throws Exception;
+
+  int restTempAdd();
 }

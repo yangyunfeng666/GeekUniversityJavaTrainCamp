@@ -256,7 +256,174 @@ jdbc连接shardingSphereProxy测试增删改查。
 
 
 ## 6.（必做）基于 hmily TCC 或 ShardingSphere 的 Atomikos XA 实现一个简单的分布式事务应用 demo（二选一），提交到 Github。
+
+使用shardingSphere-jdbc,默认ShardingSphere的xa就是使用Atomikos的XA。
+引入配置ShardingSphere配置
 ```
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-jdbc-core</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+
+<!-- 使用 XA 事务时，需要引入此模块 -->
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-transaction-xa-core</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+
+
+```
+配置ShardingSphere-jdbc配置多分片,shardingSphere.yaml文件
+```
+
+
+# 配置真实数据源
+dataSources:
+  # 配置第 1 个数据源
+  ds0: !!com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    jdbcUrl: jdbc:mysql://39.108.1.211:3306/ds0
+    username: root
+    password: X
+  # 配置第 2 个数据源
+  ds1: !!com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    jdbcUrl: jdbc:mysql://39.108.1.211:3306/ds1
+    username: root
+    password: X
+rules:
+  # 配置分片规则
+  - !SHARDING
+    tables:
+      # 配置 t_order 表规则
+      t_order:
+        actualDataNodes: ds${0..1}.t_order${0..15}
+        # 配置分库策略
+        databaseStrategy:
+          standard:
+            shardingColumn: user_id
+            shardingAlgorithmName: database_inline
+        # 配置分表策略
+        tableStrategy:
+          standard:
+            shardingColumn: order_id
+            shardingAlgorithmName: table_inline
+#        keyGenerateStrategy:
+#          column: order_id
+#          keyGeneratorName: snowflake
+
+      #      t_order_item:
+      # 省略配置 t_order_item 表规则...
+      # ...
+
+    # 配置分片算法
+    shardingAlgorithms:
+      database_inline:
+        type: INLINE
+        props:
+          algorithm-expression: ds${user_id % 2}
+      table_inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_order${order_id % 15}
+
+    keyGenerators:
+      snowflake:
+        type: SNOWFLAKE
+        props:
+          worker-id: 1
+
+```
+
+这里配置了2个数据，和每个数据16张表和上面使用Proxy是一样的。
+配置datasource
+```
+ // 创建 ShardingSphereDataSource
+    @Bean
+    DataSource getDataSource() {
+        DataSource dataSource = null;
+        try {
+            dataSource = YamlShardingSphereDataSourceFactory.createDataSource(
+                ResourceUtils.getFile(
+                "classpath:shardingsphere.yaml"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return dataSource;
+    }
+}
+
+```
+在resouces文件目录下，配置amotokos的配置文件jta.properties,修改默认配置
+```
+
+# 文件日志文件名字
+com.atomikos.icatch.file=ak
+#jta 事务超时时间
+com.atomikos.icatch.max_timeout=10000
+#最大活跃事务数
+com.atomikos.icatch.max_actives=50
+# 日志
+com.atomikos.icatch.enable_logging=true
+```
+配置事务管理器
+```
+
+@Configuration
+@EnableTransactionManagement
+public class TransactionConfiguration {
+    
+    @Bean
+    public PlatformTransactionManager txManager(final DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+    
+    @Bean
+    public JdbcTemplate jdbcTemplate(final DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+}
+```
+因为这里我使用了mybatis-plus的原因，需要在测试插入到不同的库，默认，分片数据的分布式XA事务
+
+```
+
+@Override
+@Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRED)
+@ShardingTransactionType(TransactionType.XA)
+public int add() throws Exception {
+  for (long i = 1 ;i < 10 ;i++) {
+    OrderDo orderDo = new OrderDo();
+    orderDo.setOrderId(snowFlakeUtil.nextId());
+    orderDo.setUserId(i);
+    orderDo.setUsername("张三"+i);
+    //插入不同的库 user_id 不同，至少是2个库的数据
+    int rows = orderMapper.insert(orderDo);
+    if (i == 8) {
+        //抛出异常 xa回滚
+        throw new Exception("dsdsd");
+    }
+  }
+  return 0;
+}
+```
+
+在方法上注解了回滚的错误异常，和ShardingSphere的XA事务类型。数据插入，到第8条的时候，抛出异常没有，让xa回滚。
+
+
+
+读取然后在读取原来的数据库，发现没有插入.
+```
+@Override
+public IPage<OrderVo> queryPage(int size,int current) {
+  IPage<OrderVo> page = new Page<>(current,size);
+  page.setRecords(orderMapper.queryPage(page));
+  return page;
+}
 
 ```
 

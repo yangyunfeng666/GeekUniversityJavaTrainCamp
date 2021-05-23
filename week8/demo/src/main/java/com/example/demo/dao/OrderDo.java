@@ -1,13 +1,15 @@
 package com.example.demo.dao;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 
 @TableName("t_order")
 public class OrderDo {
 
-  @TableField("order_id")
+  @TableId(value = "order_id", type = IdType.INPUT)
   private Long orderId;
 
   @TableField("user_id")

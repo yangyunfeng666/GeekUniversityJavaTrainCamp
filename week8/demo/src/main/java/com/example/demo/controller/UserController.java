@@ -17,8 +17,22 @@ public class UserController {
   private OrderService orderService;
 
   @RequestMapping(value = "/queryPage", method = RequestMethod.POST)
-  public IPage<OrderVo> add(@RequestParam(value = "page",defaultValue = "1") int page,@RequestParam(value = "size",defaultValue = "20") int size) {
+  public IPage<OrderVo> queryPage(@RequestParam(value = "page",defaultValue = "1") int page,@RequestParam(value = "size",defaultValue = "20") int size) {
     return orderService.queryPage(size,page);
+  }
+
+
+
+  @RequestMapping(value = "/add", method = RequestMethod.POST)
+  public int add(@RequestParam(value = "page",defaultValue = "1") int page,@RequestParam(value = "size",defaultValue = "20") int size)
+      throws Exception {
+    return orderService.add();
+  }
+
+
+  @RequestMapping(value = "/add1", method = RequestMethod.POST)
+  public int add1(@RequestParam(value = "page",defaultValue = "1") int page,@RequestParam(value = "size",defaultValue = "20") int size) {
+    return orderService.restTempAdd();
   }
 
 

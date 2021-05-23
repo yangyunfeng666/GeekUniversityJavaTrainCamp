@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.common.SnowFlakeUtil;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -36,5 +37,10 @@ public class DemoApplication {
             e.printStackTrace();
         }
         return dataSource;
+    }
+
+    @Bean
+    SnowFlakeUtil getSnowFlakeUtil() {
+        return SnowFlakeUtil.getFlowIdInstance();
     }
 }
