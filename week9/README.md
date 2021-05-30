@@ -220,6 +220,40 @@ public interface AccountService {
 }
 
 ```
+表设计
+```
+CREATE TABLE `test`.`account` (
+	`id` int(11) NOT NULL,
+	`username` varchar(20) DEFAULT NULL,
+	`rmd` int(10) DEFAULT 0,
+	`doller` int(10),
+	PRIMARY KEY (`id`)
+) ENGINE = 'innodb' AUTO_INCREMENT=1 DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ROW_FORMAT=DYNAMIC COMMENT='' CHECKSUM=0 DELAY_KEY_WRITE=0;
+
+
+CREATE TABLE `test`.`freeze_account` (
+	`id` int(11) NOT NULL,
+	`username` varchar(20) DEFAULT NULL,
+	`rmd` int(10) DEFAULT 0,
+	`doller` int(10),
+	PRIMARY KEY (`id`)
+) ENGINE = 'innodb' AUTO_INCREMENT=1 DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ROW_FORMAT=DYNAMIC COMMENT='' CHECKSUM=0 DELAY_KEY_WRITE=0;
+```
+account表和冻结freeze_account表的表结构是一样的。而且需要在创建一个账号的时候，在两个表里面添加相同的用户id, 当然我们可以使用业务去处理。但是我现在是理想的情况下，预插入了2个表。这样逻辑更简单
+```
+
+
+insert into account(id,username,rmd,doller) values(1,"A",0,0);
+
+insert into account(id,username,rmd,doller) values(2,"B",0,0);
+
+
+
+insert into freeze_account(id,username,rmd,doller) values(1,"A",0,0);
+
+insert into freeze_account(id,username,rmd,doller) values(2,"B",0,0);
+```
+
 
 使用tcc的主要预留和处理
 ```
@@ -229,34 +263,43 @@ public interface AccountService {
 public class AccountServiceImpl implements AccountService {
 
   @Resource
-  private AccountMapper accountMapper;
-  
-/**
- * b账号把rmd 兑换成美元，而A账号把相应的美元兑换成人民币
- * @param userB 用户B
- * @param userA 用户A
- * @param doller 兑换的人民币
- */
-@Override
-@HmilyTCC(confirmMethod = "accoutConfirm",cancelMethod = "accoutCancel")
-public void accout(Long userB, Long userA, int doller) {
-  //预留资源 1.B账号 把rmd 减7，而 A账号的美元也减1美元
-  accountMapper.accountRmdDel(userB,7 * doller);
-  accountMapper.accountDollerDel(userA,1 * doller);
-}
+  AccountMapper accountMapper;
 
-public void accoutConfirm(Long userB, Long userA, int doller) {
-  //提交 1.A账号 把rmd 加7，而 B账号的美元加1美元
-  accountMapper.accountRmdAdd(userA,7 * doller);
-  accountMapper.accountDollerAdd(userB,1 * doller);
-}
+  @Resource
+  FreezeAccountMapper freezeAccountMapper;
 
-public void accoutCancel(Long userB, Long userA, int doller) {
-  //取消 1.B账号 把rmd 加7，而 A账号的美元加1美元
-  accountMapper.accountRmdAdd(userB,7 * doller);
-  accountMapper.accountDollerAdd(userA,1 * doller);
-}
+  /**
+   * b账号把rmd 兑换成美元，而A账号把相应的美元兑换成人民币
+   * @param userB 用户B
+   * @param userA 用户A
+   * @param doller 兑换的美元
+   */
+  @Override
+  @HmilyTCC(confirmMethod = "accoutConfirm",cancelMethod = "accoutCancel")
+  public void accout(Long userB, Long userA, int doller) {
+    //预留资源 1.B账号 把rmd 减7，而 A账号的美元也减1美元
+    accountMapper.accountRmdDel(userB,7 * doller);
+    freezeAccountMapper.accountRmdAdd(userB,7*doller);
+    accountMapper.accountDollerDel(userA,1 * doller);
+    freezeAccountMapper.accountDollerAdd(userA,1 * doller);
 
+  }
+
+  public void accoutConfirm(Long userB, Long userA, int doller) {
+    //提交 1.A账号 把rmd 加7，而 B账号的美元加1美元
+    accountMapper.accountRmdAdd(userA,7 * doller);
+    freezeAccountMapper.accountRmdDel(userA,7 * doller);
+    accountMapper.accountDollerAdd(userB,1 * doller);
+    freezeAccountMapper.accountDollerDel(userB,1 * doller);
+  }
+
+  public void accoutCancel(Long userB, Long userA, int doller) {
+    //取消 1.B账号 把rmd 加7，而 A账号的美元加1美元
+    accountMapper.accountRmdAdd(userB,7 * doller);
+    freezeAccountMapper.accountRmdDel(userB,7 * doller);
+    accountMapper.accountDollerAdd(userA,1 * doller);
+    freezeAccountMapper.accountDollerDel(userA,1 * doller);
+  }
 
 }
 
@@ -306,6 +349,67 @@ public interface AccountMapper {
 AccountMapper.xml
 ```
 <mapper namespace="com.example.demo.dao.mapper.AccountMapper">
+
+    <update id="accountRmdAdd">
+        UPDATE account SET rmd = rmd + #{count} WHERE id = #{id}
+    </update>
+    <update id="accountRmdDel">
+        UPDATE account SET rmd = rmd - #{count} WHERE id = #{id}
+    </update>
+    <update id="accountDollerDel">
+        UPDATE account SET doller = doller - #{count} WHERE id = #{id}
+    </update>
+    <update id="accountDollerAdd">
+        UPDATE account SET doller = doller + #{count} WHERE id = #{id}
+    </update>
+</mapper>
+
+```
+FreezeAccountMapper.java
+```
+
+@Mapper
+public interface FreezeAccountMapper {
+
+    /**
+     * 用户人民币账号增加
+     * @param id
+     * @param count
+     * @return
+     */
+    int accountRmdAdd(@Param("id") Long id,@Param("count") int count);
+
+    /**
+     * 用户人民币账号减少
+     * @param id
+     * @param count
+     * @return
+     */
+    int accountRmdDel(@Param("id") Long id,@Param("count") int count);
+
+    /**
+     * 用户美元账号增加
+     * @param id
+     * @param count
+     * @return
+     */
+    int accountDollerAdd(@Param("id") Long id,@Param("count") int count);
+
+    /**
+     * 用户美元账号减少
+     * @param id
+     * @param count
+     * @return
+     */
+    int accountDollerDel(@Param("id") Long id,@Param("count") int count);
+
+}
+
+```
+		
+FreezeAccountMapper.xml
+```
+<mapper namespace="com.example.demo.dao.mapper.FreezeAccountMapper">
 
     <update id="accountRmdAdd">
         UPDATE account SET rmd = rmd + #{count} WHERE id = #{id}
