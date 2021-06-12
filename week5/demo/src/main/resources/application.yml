@@ -1,23 +1,10 @@
 
 spring:
   datasource:
-    # 数据源类型
-    type: com.alibaba.druid.pool.DruidDataSource
-    # 默认数据源
-    default-datasource:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://39.108.1.211:3306:3306/nacos?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&allowMultiQueries=true&serverTimezone=GMT%2B8
-      username: root
-      password: xxx
-
-    # 多数据源
-    target-datasources:
-      datasource1:
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://39.108.1.211:3306/nacos?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&allowMultiQueries=true&serverTimezone=GMT%2B8
-        username: root
-        password: xxx
-
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://39.108.1.211:3306:3306/nacos?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&allowMultiQueries=true&serverTimezone=GMT%2B8
+    username: root
+    password: Yang1sx
     # druid 默认配置
     druid:
       # 初始连接数
