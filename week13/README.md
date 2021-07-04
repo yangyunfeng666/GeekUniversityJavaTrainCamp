@@ -358,6 +358,17 @@ public String transSend(@PathVariable String str) throws ExecutionException, Int
 }
 ```
 
+### 6.（必做）思考和设计自定义 MQ 第二个版本或第三个版本，写代码实现其中至少一个功能点，把设计思路和实现代码，提交到 GitHub。
+
+设计思路
+```
+1.定义一个可变长队列数据结构，比如数据项项目是ArrayList。
+2.针对客户端读取队列，有维护改客户端，已经读取的数据offset.和确认数据ack的下标。
+3.每次客户端读去数据和收到数据确认都需要维护offset和ack的数据值
+```
+没有实现，后面有时间在想想，怎么实现。
+
+
 
 
 
